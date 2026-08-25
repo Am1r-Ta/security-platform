@@ -1,12 +1,7 @@
 import platform
 
-from fastapi import APIRouter
 
-router = APIRouter()
-
-
-@router.get("/system")
-def system_info():
+def collect_system_info():
     return {
         "hostname": platform.node(),
         "os": platform.system(),
