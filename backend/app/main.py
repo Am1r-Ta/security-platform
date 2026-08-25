@@ -1,5 +1,13 @@
 from fastapi import FastAPI
-app = FastAPI()
+from app.api.health import router as health_router
+
+app = FastAPI(
+    title="Security Platform",
+    version="0.1.0"
+)
+
+app.include_router(health_router)
+
 @app.get("/health")
 def health_check():
     return{"stutus": "ok"}
