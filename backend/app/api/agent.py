@@ -5,6 +5,7 @@ router = APIRouter(prefix="/agent", tags=["Agent"])
 
 
 class SystemInfo(BaseModel):
+    agent_id: str
     hostname: str
     os: str
     os_version: str
