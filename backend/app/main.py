@@ -1,7 +1,11 @@
 from fastapi import FastAPI
 from app.api.health import router as health_router
 from app.api.system import router as system_router
-from app.api.agent import router as agent_router    
+from app.api.agent import router as agent_router  
+from app.db.database import Base, engine
+from app.db import models  
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Security Platform",
