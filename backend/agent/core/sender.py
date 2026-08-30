@@ -16,3 +16,19 @@ def send_system_info(url: str):
 
     with urlopen(request, timeout=10) as response:
         return json.loads(response.read().decode("utf-8"))
+
+
+def send_heartbeat(url: str, agent_id: str):
+    data = {
+        "agent_id": agent_id
+    }
+
+    request = Request(
+        url,
+        data=json.dumps(data).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    with urlopen(request, timeout=10) as response:
+        return json.loads(response.read().decode("utf-8"))
