@@ -75,3 +75,39 @@ class SecurityEvent(Base):
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc)
     )
+
+
+class Incident(Base):
+    __tablename__ = "incidents"
+
+    id: Mapped[int] = mapped_column(
+        primary_key=True,
+        autoincrement=True
+    )
+
+    event_id: Mapped[int] = mapped_column(
+        index=True
+    )
+
+    agent_id: Mapped[str] = mapped_column(
+        String(36),
+        index=True
+    )
+
+    title: Mapped[str] = mapped_column(
+        String(255)
+    )
+
+    severity: Mapped[str] = mapped_column(
+        String(20)
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(20),
+        default="open"
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc)
+    )
