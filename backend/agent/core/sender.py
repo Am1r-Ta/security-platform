@@ -32,3 +32,15 @@ def send_heartbeat(url: str, agent_id: str):
 
     with urlopen(request, timeout=10) as response:
         return json.loads(response.read().decode("utf-8"))
+
+
+def send_event(url: str, event: dict):
+    request = Request(
+        url,
+        data=json.dumps(event).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    with urlopen(request, timeout=10) as response:
+        return json.loads(response.read().decode("utf-8"))
