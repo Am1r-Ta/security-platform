@@ -15,12 +15,17 @@ router = APIRouter(
 
 
 @router.post("")
-def receive_event(event: dict, db: Session = Depends(get_db)):
+def receive_event(
+    event: dict,
+    db: Session = Depends(get_db)
+):
     detection = analyze_event(event)
 
     security_event = SecurityEvent(
         agent_id=event.get("agent_id", "unknown"),
         event_type=event.get("event_type", "unknown"),
+        pid=event.get("pid"),
+        process_name=event.get("process_name"),
         detected=detection["detected"],
         severity=detection["severity"],
         reason=detection["reason"],
@@ -58,7 +63,9 @@ def receive_event(event: dict, db: Session = Depends(get_db)):
 
 
 @router.get("")
-def list_events(db: Session = Depends(get_db)):
+def list_events(
+    db: Session = Depends(get_db)
+):
     events = (
         db.query(SecurityEvent)
         .order_by(SecurityEvent.id.desc())
@@ -70,6 +77,8 @@ def list_events(db: Session = Depends(get_db)):
             "id": event.id,
             "agent_id": event.agent_id,
             "event_type": event.event_type,
+            "pid": event.pid,
+            "process_name": event.process_name,
             "detected": event.detected,
             "severity": event.severity,
             "reason": event.reason,
@@ -80,7 +89,9 @@ def list_events(db: Session = Depends(get_db)):
 
 
 @router.get("/incidents")
-def list_incidents(db: Session = Depends(get_db)):
+def list_incidents(
+    db: Session = Depends(get_db)
+):
     incidents = (
         db.query(Incident)
         .order_by(Incident.id.desc())
@@ -105,7 +116,7 @@ def list_incidents(db: Session = Depends(get_db)):
 def update_incident(
     incident_id: int,
     status: str,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db)
 ):
     incident = (
         db.query(Incident)
@@ -114,7 +125,9 @@ def update_incident(
     )
 
     if not incident:
-        return {"error": "Incident not found"}
+        return {
+            "error": "Incident not found"
+        }
 
     allowed_statuses = {
         "open",
@@ -129,6 +142,7 @@ def update_incident(
         }
 
     incident.status = status
+
     db.commit()
     db.refresh(incident)
 

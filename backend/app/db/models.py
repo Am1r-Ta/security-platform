@@ -1,12 +1,4 @@
 from datetime import datetime, timezone
-from sqlalchemy import DateTime, String, Boolean
-from sqlalchemy import DateTime, String
-from sqlalchemy.orm import Mapped, mapped_column
-
-from app.db.database import Base
-
-
-from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -17,10 +9,7 @@ from app.db.database import Base
 class Agent(Base):
     __tablename__ = "agents"
 
-    id: Mapped[int] = mapped_column(
-        primary_key=True,
-        autoincrement=True
-    )
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
 
     agent_id: Mapped[str] = mapped_column(
         String(36),
@@ -55,6 +44,15 @@ class SecurityEvent(Base):
 
     event_type: Mapped[str] = mapped_column(
         String(100)
+    )
+
+    pid: Mapped[int | None] = mapped_column(
+        nullable=True
+    )
+
+    process_name: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True
     )
 
     detected: Mapped[bool] = mapped_column(
