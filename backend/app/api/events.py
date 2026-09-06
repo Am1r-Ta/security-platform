@@ -7,7 +7,6 @@ from app.db.database import get_db
 from app.db.models import SecurityEvent, Incident
 from app.detection.engine import analyze_event
 
-
 router = APIRouter(
     prefix="/api/v1/events",
     tags=["events"]
@@ -110,6 +109,50 @@ def list_incidents(
         }
         for incident in incidents
     ]
+
+
+@router.get("/incidents/{incident_id}")
+def get_incident(
+    incident_id: int,
+    db: Session = Depends(get_db)
+):
+    incident = (
+        db.query(Incident)
+        .filter(Incident.id == incident_id)
+        .first()
+    )
+
+    if not incident:
+        return {
+            "error": "Incident not found"
+        }
+
+    event = (
+        db.query(SecurityEvent)
+        .filter(SecurityEvent.id == incident.event_id)
+        .first()
+    )
+
+    return {
+        "id": incident.id,
+        "event_id": incident.event_id,
+        "agent_id": incident.agent_id,
+        "title": incident.title,
+        "severity": incident.severity,
+        "status": incident.status,
+        "created_at": incident.created_at,
+        "event": {
+            "id": event.id,
+            "agent_id": event.agent_id,
+            "event_type": event.event_type,
+            "pid": event.pid,
+            "process_name": event.process_name,
+            "detected": event.detected,
+            "severity": event.severity,
+            "reason": event.reason,
+            "timestamp": event.timestamp,
+        } if event else None,
+    }
 
 
 @router.patch("/incidents/{incident_id}")
