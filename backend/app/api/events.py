@@ -89,10 +89,20 @@ def list_events(
 
 @router.get("/incidents")
 def list_incidents(
+    status: str | None = None,
+    severity: str | None = None,
     db: Session = Depends(get_db)
 ):
+    query = db.query(Incident)
+
+    if status is not None:
+        query = query.filter(Incident.status == status)
+
+    if severity is not None:
+        query = query.filter(Incident.severity == severity)
+
     incidents = (
-        db.query(Incident)
+        query
         .order_by(Incident.id.desc())
         .all()
     )
