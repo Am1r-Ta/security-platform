@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.db.models import Agent
 
-
 router = APIRouter(
     prefix="/api/v1/agents",
     tags=["agents"]
@@ -18,35 +17,13 @@ def register_agent(
     data: dict,
     db: Session = Depends(get_db)
 ):
-    existing_agent = (
-        db.query(Agent)
-        .filter(Agent.agent_id == data["agent_id"])
-        .first()
-    )
-
-    if existing_agent:
-        existing_agent.hostname = data["hostname"]
-        existing_agent.os = data["os"]
-        existing_agent.os_version = data["os_version"]
-        existing_agent.architecture = data["architecture"]
-        existing_agent.python_version = data["python_version"]
-        existing_agent.last_seen = datetime.now(timezone.utc)
-
-        db.commit()
-
-        return {
-            "status": "updated",
-            "agent_id": existing_agent.agent_id,
-            "last_seen": existing_agent.last_seen,
-        }
-
     agent = Agent(
-        agent_id=data["agent_id"],
-        hostname=data["hostname"],
-        os=data["os"],
-        os_version=data["os_version"],
-        architecture=data["architecture"],
-        python_version=data["python_version"],
+        agent_id=data.get("agent_id"),
+        hostname=data.get("hostname", "unknown"),
+        os=data.get("os", "unknown"),
+        os_version=data.get("os_version", "unknown"),
+        architecture=data.get("architecture", "unknown"),
+        python_version=data.get("python_version", "unknown"),
         last_seen=datetime.now(timezone.utc),
     )
 
@@ -57,12 +34,12 @@ def register_agent(
     return {
         "status": "registered",
         "agent_id": agent.agent_id,
-        "last_seen": agent.last_seen,
+        "hostname": agent.hostname,
     }
 
 
 @router.post("/{agent_id}/heartbeat")
-def agent_heartbeat(
+def heartbeat(
     agent_id: str,
     db: Session = Depends(get_db)
 ):
@@ -74,13 +51,13 @@ def agent_heartbeat(
 
     if not agent:
         return {
-            "status": "error",
-            "message": "Agent not found"
+            "error": "Agent not found"
         }
 
     agent.last_seen = datetime.now(timezone.utc)
 
     db.commit()
+    db.refresh(agent)
 
     return {
         "status": "heartbeat_received",
@@ -90,8 +67,14 @@ def agent_heartbeat(
 
 
 @router.get("")
-def list_agents(db: Session = Depends(get_db)):
-    agents = db.query(Agent).all()
+def list_agents(
+    db: Session = Depends(get_db)
+):
+    agents = (
+        db.query(Agent)
+        .order_by(Agent.id.desc())
+        .all()
+    )
 
     now = datetime.now(timezone.utc)
 
@@ -107,9 +90,15 @@ def list_agents(db: Session = Depends(get_db)):
             now - last_seen
         ).total_seconds()
 
-        status = "online" if seconds_since_seen <= 60 else "offline"
+        if seconds_since_seen <= 30:
+            status = "online"
+        elif seconds_since_seen <= 120:
+            status = "stale"
+        else:
+            status = "offline"
 
         result.append({
+            "id": agent.id,
             "agent_id": agent.agent_id,
             "hostname": agent.hostname,
             "os": agent.os,
