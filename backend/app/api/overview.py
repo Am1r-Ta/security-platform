@@ -69,6 +69,30 @@ def get_overview(
         .count()
     )
 
+    critical_incidents = (
+        db.query(Incident)
+        .filter(Incident.severity == "critical")
+        .count()
+    )
+
+    high_incidents = (
+        db.query(Incident)
+        .filter(Incident.severity == "high")
+        .count()
+    )
+
+    medium_incidents = (
+        db.query(Incident)
+        .filter(Incident.severity == "medium")
+        .count()
+    )
+
+    low_incidents = (
+        db.query(Incident)
+        .filter(Incident.severity == "low")
+        .count()
+    )
+
     return {
         "agents": {
             "total": len(agents),
@@ -85,5 +109,11 @@ def get_overview(
             "open": open_incidents,
             "investigating": investigating_incidents,
             "resolved": resolved_incidents,
+        },
+        "severity": {
+            "critical": critical_incidents,
+            "high": high_incidents,
+            "medium": medium_incidents,
+            "low": low_incidents,
         },
     }
