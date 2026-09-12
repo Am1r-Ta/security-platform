@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.db.models import Agent
 
+
 router = APIRouter(
     prefix="/api/v1/agents",
     tags=["agents"]
@@ -17,13 +18,78 @@ def register_agent(
     data: dict,
     db: Session = Depends(get_db)
 ):
+    agent_id = data.get("agent_id")
+
+    if not agent_id:
+        return {
+            "error": "agent_id is required"
+        }
+
+    agent = (
+        db.query(Agent)
+        .filter(Agent.agent_id == agent_id)
+        .first()
+    )
+
+    if agent:
+        agent.hostname = data.get(
+            "hostname",
+            agent.hostname
+        )
+
+        agent.os = data.get(
+            "os",
+            agent.os
+        )
+
+        agent.os_version = data.get(
+            "os_version",
+            agent.os_version
+        )
+
+        agent.architecture = data.get(
+            "architecture",
+            agent.architecture
+        )
+
+        agent.python_version = data.get(
+            "python_version",
+            agent.python_version
+        )
+
+        agent.last_seen = datetime.now(timezone.utc)
+
+        db.commit()
+        db.refresh(agent)
+
+        return {
+            "status": "already_registered",
+            "agent_id": agent.agent_id,
+            "hostname": agent.hostname,
+        }
+
     agent = Agent(
-        agent_id=data.get("agent_id"),
-        hostname=data.get("hostname", "unknown"),
-        os=data.get("os", "unknown"),
-        os_version=data.get("os_version", "unknown"),
-        architecture=data.get("architecture", "unknown"),
-        python_version=data.get("python_version", "unknown"),
+        agent_id=agent_id,
+        hostname=data.get(
+            "hostname",
+            "unknown"
+        ),
+        os=data.get(
+            "os",
+            "unknown"
+        ),
+        os_version=data.get(
+            "os_version",
+            "unknown"
+        ),
+        architecture=data.get(
+            "architecture",
+            "unknown"
+        ),
+        python_version=data.get(
+            "python_version",
+            "unknown"
+        ),
         last_seen=datetime.now(timezone.utc),
     )
 
@@ -84,7 +150,9 @@ def list_agents(
         last_seen = agent.last_seen
 
         if last_seen.tzinfo is None:
-            last_seen = last_seen.replace(tzinfo=timezone.utc)
+            last_seen = last_seen.replace(
+                tzinfo=timezone.utc
+            )
 
         seconds_since_seen = (
             now - last_seen
