@@ -1,33 +1,26 @@
+from app.detection.rules.authentication import (
+    analyze_authentication_event,
+)
+
+from app.detection.rules.process import (
+    analyze_process_event,
+)
+
+
 def analyze_event(event: dict) -> dict:
-    event_type = event.get("event_type", "")
-    process_name = (event.get("process_name") or "").lower()
+    rules = [
+        analyze_authentication_event,
+        analyze_process_event,
+    ]
 
-    severity = "low"
-    detected = False
-    reason = None
+    for rule in rules:
+        result = rule(event)
 
-    # Authentication rules
-    if event_type == "failed_login":
-        detected = True
-        severity = "medium"
-        reason = "Failed login attempt detected"
-
-    elif event_type == "multiple_failed_logins":
-        detected = True
-        severity = "high"
-        reason = "Multiple failed login attempts detected"
-
-    # Process telemetry
-    elif event_type == "new_process":
-        severity = "low"
-        reason = "New process observed"
-
-        if process_name in {"powershell.exe", "cmd.exe"}:
-            severity = "low"
-            reason = "Command-line process observed"
+        if result is not None:
+            return result
 
     return {
-        "detected": detected,
-        "severity": severity,
-        "reason": reason,
+        "detected": False,
+        "severity": "low",
+        "reason": None,
     }
