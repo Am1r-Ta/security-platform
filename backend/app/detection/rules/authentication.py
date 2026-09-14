@@ -6,6 +6,7 @@ def analyze_authentication_event(event: dict) -> dict | None:
             "detected": True,
             "severity": "medium",
             "reason": "Failed login attempt detected",
+            "rule_id": "AUTH-001",
         }
 
     if event_type == "multiple_failed_logins":
@@ -13,6 +14,7 @@ def analyze_authentication_event(event: dict) -> dict | None:
             "detected": True,
             "severity": "high",
             "reason": "Multiple failed login attempts detected",
+            "rule_id": "AUTH-002",
         }
 
     return None

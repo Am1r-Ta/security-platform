@@ -9,7 +9,10 @@ from app.db.database import Base
 class Agent(Base):
     __tablename__ = "agents"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(
+        primary_key=True,
+        autoincrement=True
+    )
 
     agent_id: Mapped[str] = mapped_column(
         String(36),
@@ -17,11 +20,25 @@ class Agent(Base):
         index=True
     )
 
-    hostname: Mapped[str] = mapped_column(String(255))
-    os: Mapped[str] = mapped_column(String(100))
-    os_version: Mapped[str] = mapped_column(String(100))
-    architecture: Mapped[str] = mapped_column(String(100))
-    python_version: Mapped[str] = mapped_column(String(50))
+    hostname: Mapped[str] = mapped_column(
+        String(255)
+    )
+
+    os: Mapped[str] = mapped_column(
+        String(100)
+    )
+
+    os_version: Mapped[str] = mapped_column(
+        String(100)
+    )
+
+    architecture: Mapped[str] = mapped_column(
+        String(100)
+    )
+
+    python_version: Mapped[str] = mapped_column(
+        String(50)
+    )
 
     last_seen: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -66,6 +83,11 @@ class SecurityEvent(Base):
 
     reason: Mapped[str | None] = mapped_column(
         String(255),
+        nullable=True
+    )
+
+    rule_id: Mapped[str | None] = mapped_column(
+        String(50),
         nullable=True
     )
 

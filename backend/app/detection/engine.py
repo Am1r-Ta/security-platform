@@ -23,4 +23,5 @@ def analyze_event(event: dict) -> dict:
         "detected": False,
         "severity": "low",
         "reason": None,
+        "rule_id": None,
     }

@@ -7,6 +7,7 @@ from app.db.database import get_db
 from app.db.models import SecurityEvent, Incident
 from app.detection.engine import analyze_event
 
+
 router = APIRouter(
     prefix="/api/v1/events",
     tags=["events"]
@@ -21,13 +22,20 @@ def receive_event(
     detection = analyze_event(event)
 
     security_event = SecurityEvent(
-        agent_id=event.get("agent_id", "unknown"),
-        event_type=event.get("event_type", "unknown"),
+        agent_id=event.get(
+            "agent_id",
+            "unknown"
+        ),
+        event_type=event.get(
+            "event_type",
+            "unknown"
+        ),
         pid=event.get("pid"),
         process_name=event.get("process_name"),
         detected=detection["detected"],
         severity=detection["severity"],
         reason=detection["reason"],
+        rule_id=detection["rule_id"],
         timestamp=datetime.now(timezone.utc),
     )
 
@@ -41,7 +49,10 @@ def receive_event(
         incident = Incident(
             event_id=security_event.id,
             agent_id=security_event.agent_id,
-            title=detection["reason"] or "Security incident detected",
+            title=(
+                detection["reason"]
+                or "Security incident detected"
+            ),
             severity=detection["severity"],
             status="open",
             created_at=datetime.now(timezone.utc),
@@ -81,6 +92,7 @@ def list_events(
             "detected": event.detected,
             "severity": event.severity,
             "reason": event.reason,
+            "rule_id": event.rule_id,
             "timestamp": event.timestamp,
         }
         for event in events
@@ -96,10 +108,14 @@ def list_incidents(
     query = db.query(Incident)
 
     if status is not None:
-        query = query.filter(Incident.status == status)
+        query = query.filter(
+            Incident.status == status
+        )
 
     if severity is not None:
-        query = query.filter(Incident.severity == severity)
+        query = query.filter(
+            Incident.severity == severity
+        )
 
     incidents = (
         query
@@ -139,7 +155,9 @@ def get_incident(
 
     event = (
         db.query(SecurityEvent)
-        .filter(SecurityEvent.id == incident.event_id)
+        .filter(
+            SecurityEvent.id == incident.event_id
+        )
         .first()
     )
 
@@ -160,6 +178,7 @@ def get_incident(
             "detected": event.detected,
             "severity": event.severity,
             "reason": event.reason,
+            "rule_id": event.rule_id,
             "timestamp": event.timestamp,
         } if event else None,
     }

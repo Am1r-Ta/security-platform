@@ -16,10 +16,12 @@ def analyze_process_event(event: dict) -> dict | None:
             "detected": False,
             "severity": "low",
             "reason": "Command-line process observed",
+            "rule_id": "PROC-001",
         }
 
     return {
         "detected": False,
         "severity": "low",
         "reason": "New process observed",
+        "rule_id": "PROC-002",
     }
