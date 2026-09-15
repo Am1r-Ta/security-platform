@@ -55,6 +55,7 @@ def receive_event(
             ),
             severity=detection["severity"],
             status="open",
+            rule_id=detection["rule_id"],
             created_at=datetime.now(timezone.utc),
         )
 
@@ -103,6 +104,7 @@ def list_events(
 def list_incidents(
     status: str | None = None,
     severity: str | None = None,
+    rule_id: str | None = None,
     db: Session = Depends(get_db)
 ):
     query = db.query(Incident)
@@ -115,6 +117,11 @@ def list_incidents(
     if severity is not None:
         query = query.filter(
             Incident.severity == severity
+        )
+
+    if rule_id is not None:
+        query = query.filter(
+            Incident.rule_id == rule_id
         )
 
     incidents = (
@@ -131,6 +138,7 @@ def list_incidents(
             "title": incident.title,
             "severity": incident.severity,
             "status": incident.status,
+            "rule_id": incident.rule_id,
             "created_at": incident.created_at,
         }
         for incident in incidents
@@ -168,6 +176,7 @@ def get_incident(
         "title": incident.title,
         "severity": incident.severity,
         "status": incident.status,
+        "rule_id": incident.rule_id,
         "created_at": incident.created_at,
         "event": {
             "id": event.id,
@@ -227,6 +236,7 @@ def update_incident(
             "title": incident.title,
             "severity": incident.severity,
             "status": incident.status,
+            "rule_id": incident.rule_id,
             "created_at": incident.created_at,
         },
     }
