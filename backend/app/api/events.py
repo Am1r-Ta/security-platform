@@ -4,7 +4,11 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import SecurityEvent, Incident
+from app.db.models import (
+    SecurityEvent,
+    Incident,
+    IncidentTimeline,
+)
 from app.detection.engine import analyze_event
 
 
@@ -22,14 +26,8 @@ def receive_event(
     detection = analyze_event(event)
 
     security_event = SecurityEvent(
-        agent_id=event.get(
-            "agent_id",
-            "unknown"
-        ),
-        event_type=event.get(
-            "event_type",
-            "unknown"
-        ),
+        agent_id=event.get("agent_id", "unknown"),
+        event_type=event.get("event_type", "unknown"),
         pid=event.get("pid"),
         process_name=event.get("process_name"),
         detected=detection["detected"],
@@ -62,6 +60,17 @@ def receive_event(
         db.add(incident)
         db.commit()
         db.refresh(incident)
+
+        timeline_entry = IncidentTimeline(
+            incident_id=incident.id,
+            action="incident_created",
+            old_status=None,
+            new_status=incident.status,
+            timestamp=datetime.now(timezone.utc),
+        )
+
+        db.add(timeline_entry)
+        db.commit()
 
         incident_id = incident.id
 
@@ -163,10 +172,17 @@ def get_incident(
 
     event = (
         db.query(SecurityEvent)
-        .filter(
-            SecurityEvent.id == incident.event_id
-        )
+        .filter(SecurityEvent.id == incident.event_id)
         .first()
+    )
+
+    timeline = (
+        db.query(IncidentTimeline)
+        .filter(
+            IncidentTimeline.incident_id == incident.id
+        )
+        .order_by(IncidentTimeline.id.asc())
+        .all()
     )
 
     return {
@@ -190,7 +206,55 @@ def get_incident(
             "rule_id": event.rule_id,
             "timestamp": event.timestamp,
         } if event else None,
+        "timeline": [
+            {
+                "id": item.id,
+                "action": item.action,
+                "old_status": item.old_status,
+                "new_status": item.new_status,
+                "timestamp": item.timestamp,
+            }
+            for item in timeline
+        ],
     }
+
+
+@router.get("/incidents/{incident_id}/timeline")
+def get_incident_timeline(
+    incident_id: int,
+    db: Session = Depends(get_db)
+):
+    incident = (
+        db.query(Incident)
+        .filter(Incident.id == incident_id)
+        .first()
+    )
+
+    if not incident:
+        return {
+            "error": "Incident not found"
+        }
+
+    timeline = (
+        db.query(IncidentTimeline)
+        .filter(
+            IncidentTimeline.incident_id == incident_id
+        )
+        .order_by(IncidentTimeline.id.asc())
+        .all()
+    )
+
+    return [
+        {
+            "id": item.id,
+            "incident_id": item.incident_id,
+            "action": item.action,
+            "old_status": item.old_status,
+            "new_status": item.new_status,
+            "timestamp": item.timestamp,
+        }
+        for item in timeline
+    ]
 
 
 @router.patch("/incidents/{incident_id}")
@@ -222,7 +286,20 @@ def update_incident(
             "allowed": list(allowed_statuses),
         }
 
-    incident.status = status
+    old_status = incident.status
+
+    if old_status != status:
+        incident.status = status
+
+        timeline_entry = IncidentTimeline(
+            incident_id=incident.id,
+            action="status_changed",
+            old_status=old_status,
+            new_status=status,
+            timestamp=datetime.now(timezone.utc),
+        )
+
+        db.add(timeline_entry)
 
     db.commit()
     db.refresh(incident)

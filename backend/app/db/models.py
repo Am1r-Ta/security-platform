@@ -20,25 +20,11 @@ class Agent(Base):
         index=True
     )
 
-    hostname: Mapped[str] = mapped_column(
-        String(255)
-    )
-
-    os: Mapped[str] = mapped_column(
-        String(100)
-    )
-
-    os_version: Mapped[str] = mapped_column(
-        String(100)
-    )
-
-    architecture: Mapped[str] = mapped_column(
-        String(100)
-    )
-
-    python_version: Mapped[str] = mapped_column(
-        String(50)
-    )
+    hostname: Mapped[str] = mapped_column(String(255))
+    os: Mapped[str] = mapped_column(String(100))
+    os_version: Mapped[str] = mapped_column(String(100))
+    architecture: Mapped[str] = mapped_column(String(100))
+    python_version: Mapped[str] = mapped_column(String(50))
 
     last_seen: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -133,6 +119,38 @@ class Incident(Base):
     )
 
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc)
+    )
+
+
+class IncidentTimeline(Base):
+    __tablename__ = "incident_timeline"
+
+    id: Mapped[int] = mapped_column(
+        primary_key=True,
+        autoincrement=True
+    )
+
+    incident_id: Mapped[int] = mapped_column(
+        index=True
+    )
+
+    action: Mapped[str] = mapped_column(
+        String(50)
+    )
+
+    old_status: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True
+    )
+
+    new_status: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True
+    )
+
+    timestamp: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc)
     )
