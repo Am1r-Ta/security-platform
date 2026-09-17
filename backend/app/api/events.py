@@ -42,42 +42,70 @@ def receive_event(
     db.refresh(security_event)
 
     incident_id = None
+    incident_created = False
+    incident_reused = False
 
     if detection["detected"]:
-        incident = Incident(
-            event_id=security_event.id,
-            agent_id=security_event.agent_id,
-            title=(
-                detection["reason"]
-                or "Security incident detected"
-            ),
-            severity=detection["severity"],
-            status="open",
-            rule_id=detection["rule_id"],
-            created_at=datetime.now(timezone.utc),
+        agent_id = security_event.agent_id
+        rule_id = detection["rule_id"]
+        event_type = security_event.event_type
+
+        active_incident = (
+            db.query(Incident)
+            .filter(
+                Incident.agent_id == agent_id,
+                Incident.rule_id == rule_id,
+                Incident.event_id.is_not(None),
+                Incident.status.in_(
+                    ["open", "investigating"]
+                ),
+            )
+            .order_by(Incident.id.desc())
+            .first()
         )
 
-        db.add(incident)
-        db.commit()
-        db.refresh(incident)
+        if active_incident:
+            incident_id = active_incident.id
+            incident_reused = True
 
-        timeline_entry = IncidentTimeline(
-            incident_id=incident.id,
-            action="incident_created",
-            old_status=None,
-            new_status=incident.status,
-            timestamp=datetime.now(timezone.utc),
-        )
+        else:
+            incident = Incident(
+                event_id=security_event.id,
+                agent_id=agent_id,
+                title=(
+                    detection["reason"]
+                    or "Security incident detected"
+                ),
+                severity=detection["severity"],
+                status="open",
+                rule_id=rule_id,
+                created_at=datetime.now(timezone.utc),
+            )
 
-        db.add(timeline_entry)
-        db.commit()
+            db.add(incident)
+            db.commit()
+            db.refresh(incident)
 
-        incident_id = incident.id
+            timeline_entry = IncidentTimeline(
+                incident_id=incident.id,
+                action="incident_created",
+                old_status=None,
+                new_status=incident.status,
+                timestamp=datetime.now(timezone.utc),
+            )
+
+            db.add(timeline_entry)
+            db.commit()
+
+            incident_id = incident.id
+            incident_created = True
 
     return {
         "status": "processed",
         "event_id": security_event.id,
         "incident_id": incident_id,
+        "incident_created": incident_created,
+        "incident_reused": incident_reused,
         "detection": detection,
     }
 
