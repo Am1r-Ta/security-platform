@@ -8,6 +8,7 @@ from app.db.models import (
     SecurityEvent,
     Incident,
     IncidentTimeline,
+    IncidentEvent,
 )
 from app.detection.engine import analyze_event
 
@@ -48,7 +49,6 @@ def receive_event(
     if detection["detected"]:
         agent_id = security_event.agent_id
         rule_id = detection["rule_id"]
-        event_type = security_event.event_type
 
         active_incident = (
             db.query(Incident)
@@ -99,6 +99,15 @@ def receive_event(
 
             incident_id = incident.id
             incident_created = True
+
+        incident_event = IncidentEvent(
+            incident_id=incident_id,
+            event_id=security_event.id,
+            created_at=datetime.now(timezone.utc),
+        )
+
+        db.add(incident_event)
+        db.commit()
 
     return {
         "status": "processed",
@@ -204,6 +213,19 @@ def get_incident(
         .first()
     )
 
+    related_events = (
+        db.query(SecurityEvent)
+        .join(
+            IncidentEvent,
+            IncidentEvent.event_id == SecurityEvent.id
+        )
+        .filter(
+            IncidentEvent.incident_id == incident.id
+        )
+        .order_by(SecurityEvent.id.asc())
+        .all()
+    )
+
     timeline = (
         db.query(IncidentTimeline)
         .filter(
@@ -234,6 +256,21 @@ def get_incident(
             "rule_id": event.rule_id,
             "timestamp": event.timestamp,
         } if event else None,
+        "related_events": [
+            {
+                "id": item.id,
+                "agent_id": item.agent_id,
+                "event_type": item.event_type,
+                "pid": item.pid,
+                "process_name": item.process_name,
+                "detected": item.detected,
+                "severity": item.severity,
+                "reason": item.reason,
+                "rule_id": item.rule_id,
+                "timestamp": item.timestamp,
+            }
+            for item in related_events
+        ],
         "timeline": [
             {
                 "id": item.id,
@@ -245,6 +282,52 @@ def get_incident(
             for item in timeline
         ],
     }
+
+
+@router.get("/incidents/{incident_id}/events")
+def get_incident_events(
+    incident_id: int,
+    db: Session = Depends(get_db)
+):
+    incident = (
+        db.query(Incident)
+        .filter(Incident.id == incident_id)
+        .first()
+    )
+
+    if not incident:
+        return {
+            "error": "Incident not found"
+        }
+
+    related_events = (
+        db.query(SecurityEvent)
+        .join(
+            IncidentEvent,
+            IncidentEvent.event_id == SecurityEvent.id
+        )
+        .filter(
+            IncidentEvent.incident_id == incident_id
+        )
+        .order_by(SecurityEvent.id.asc())
+        .all()
+    )
+
+    return [
+        {
+            "id": event.id,
+            "agent_id": event.agent_id,
+            "event_type": event.event_type,
+            "pid": event.pid,
+            "process_name": event.process_name,
+            "detected": event.detected,
+            "severity": event.severity,
+            "reason": event.reason,
+            "rule_id": event.rule_id,
+            "timestamp": event.timestamp,
+        }
+        for event in related_events
+    ]
 
 
 @router.get("/incidents/{incident_id}/timeline")
