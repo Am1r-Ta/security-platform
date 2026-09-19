@@ -368,6 +368,102 @@ def get_incident_timeline(
     ]
 
 
+
+@router.get("/incidents/{incident_id}/attack-timeline")
+def get_incident_attack_timeline(
+    incident_id: int,
+    db: Session = Depends(get_db)
+):
+    incident = (
+        db.query(Incident)
+        .filter(Incident.id == incident_id)
+        .first()
+    )
+
+    if not incident:
+        return {
+            "error": "Incident not found"
+        }
+
+    related_events = (
+        db.query(SecurityEvent)
+        .join(
+            IncidentEvent,
+            IncidentEvent.event_id == SecurityEvent.id
+        )
+        .filter(
+            IncidentEvent.incident_id == incident_id
+        )
+        .all()
+    )
+
+    event_ids = {
+        event.id
+        for event in related_events
+    }
+
+    trigger_event = (
+        db.query(SecurityEvent)
+        .filter(
+            SecurityEvent.id == incident.event_id
+        )
+        .first()
+    )
+
+    if (
+        trigger_event
+        and trigger_event.id not in event_ids
+    ):
+        related_events.append(trigger_event)
+
+    timeline_entries = (
+        db.query(IncidentTimeline)
+        .filter(
+            IncidentTimeline.incident_id == incident_id
+        )
+        .all()
+    )
+
+    timeline = []
+
+    for event in related_events:
+        timeline.append(
+            {
+                "type": "event",
+                "event_id": event.id,
+                "event_type": event.event_type,
+                "severity": event.severity,
+                "rule_id": event.rule_id,
+                "timestamp": event.timestamp,
+                "details": {
+                    "agent_id": event.agent_id,
+                    "pid": event.pid,
+                    "process_name": event.process_name,
+                    "detected": event.detected,
+                    "reason": event.reason,
+                },
+            }
+        )
+
+    for entry in timeline_entries:
+        timeline.append(
+            {
+                "type": "incident_action",
+                "timeline_id": entry.id,
+                "action": entry.action,
+                "old_status": entry.old_status,
+                "new_status": entry.new_status,
+                "timestamp": entry.timestamp,
+            }
+        )
+
+    timeline.sort(
+        key=lambda item: item["timestamp"]
+    )
+
+    return timeline
+
+
 @router.patch("/incidents/{incident_id}")
 def update_incident(
     incident_id: int,
